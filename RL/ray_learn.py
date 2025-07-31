@@ -7,6 +7,13 @@ import pickle
 import datetime
 from ray.tune.logger import UnifiedLogger
 import time
+import wandb
+
+wandb.login()
+
+# Project that the run is recorded to
+wandb_project_name = "test-wandb-proj"
+
 
 def custom_log_creator(custom_path, custom_str):
     ts = time.time()
@@ -54,7 +61,7 @@ def load_policy(algo, env_name, policy_path=None, seed=0, env_config={}, eval=Fa
                                logger_creator=custom_log_creator("data/local/ray_results", env_name)
         )
     elif algo == 'sac':
-        agent = sac.SACTrainer(setup_config(algo, seed, env_config, eval=eval), env_name, 
+        agent = sac.SACTrainer(setup_config(algo, seed, env_config, eval=eval), env_name,
                                logger_creator=custom_log_creator("data/local/ray_results", env_name)
         )
     if policy_path is not None:
@@ -73,7 +80,7 @@ def load_policy(algo, env_name, policy_path=None, seed=0, env_config={}, eval=Fa
             return agent, None
     return agent, None
 
-def train(env_name, algo, timesteps_total=2000000, save_dir='./trained_models/', load_policy_path='', seed=0, 
+def train(env_name, algo, timesteps_total=2000000, save_dir='./trained_models/', load_policy_path='', seed=0,
           env_config={}, eval_interval=20000, render=False):
 
     if not ray.is_initialized():
@@ -123,13 +130,13 @@ def train(env_name, algo, timesteps_total=2000000, save_dir='./trained_models/',
                 ret += reward
                 rgb, depth = env.render()
                 rgbs.append(rgb)
-                
+
                 state_file_path = os.path.join(state_save_path, "state_{}.pkl".format(t_idx))
                 state = save_env(env, save_path=state_file_path)
                 state_files.append(state_file_path)
                 states.append(state)
                 t_idx += 1
-                
+
             save_numpy_as_gif(np.array(rgbs), "{}/{}.gif".format(state_save_path, "execute"))
 
             print("evaluating at {} return is {}".format(timesteps, ret))
@@ -145,7 +152,7 @@ def train(env_name, algo, timesteps_total=2000000, save_dir='./trained_models/',
                 with open(os.path.join(best_state_save_path, "return_{}.txt".format(round(ret, 3))), 'w') as f:
                     f.write(str(ret))
                 save_numpy_as_gif(np.array(best_rgbs), "{}/{}.gif".format(best_state_save_path, "best"))
-                
+
     env.disconnect()
     return best_model_path, best_rgbs, best_state_files
 
@@ -183,21 +190,21 @@ def make_env(config, render=False):
     action_space = config['action_space']
 
     env, safe_config = build_up_env(
-            task_config_path, 
-            solution_path, 
-            task_name, 
-            last_restore_state_file, 
-            render=render, 
-            action_space=action_space, 
-            randomize=config['randomize'], 
+            task_config_path,
+            solution_path,
+            task_name,
+            last_restore_state_file,
+            render=render,
+            action_space=action_space,
+            randomize=config['randomize'],
             obj_id=config['obj_id'],
         )
 
     return env
 
-def run_RL(task_config_path, solution_path, task_name, last_restore_state_file, save_path, 
-           action_space='delta-translation', algo="sac", timesteps_total=1000000, load_policy_path=None, seed=0, 
-           render=False, randomize=False, use_bard=True, obj_id=0, 
+def run_RL(task_config_path, solution_path, task_name, last_restore_state_file, save_path,
+           action_space='delta-translation', algo="sac", timesteps_total=1000000, load_policy_path=None, seed=0,
+           render=False, randomize=False, use_bard=True, obj_id=0,
            use_gpt_size=True, use_gpt_joint_angle=True, use_gpt_spatial_relationship=True,
            use_distractor=False):
     env_name = task_name
@@ -216,13 +223,13 @@ def run_RL(task_config_path, solution_path, task_name, last_restore_state_file, 
         "use_gpt_spatial_relationship": use_gpt_spatial_relationship,
         "use_distractor": use_distractor
     }
-    
-    timesteps_total = 1000000 
-    eval_interval = 20000 
-    
+
+    timesteps_total = 1000000
+    eval_interval = 20000
+
     tune.register_env(env_name, lambda config: make_env(config))
-    best_policy_path, rgbs, best_traj_state_paths = train(env_name, algo, timesteps_total=timesteps_total, 
+    best_policy_path, rgbs, best_traj_state_paths = train(env_name, algo, timesteps_total=timesteps_total,
                             load_policy_path=load_policy_path, save_dir=save_path, seed=seed, env_config=env_config, render=render,
                             eval_interval=eval_interval)
-    
+
     return best_policy_path, rgbs, best_traj_state_paths

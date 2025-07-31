@@ -2,32 +2,13 @@ import openai
 import os
 import time
 import json
+import anthropic
 
-os.environ["OPENAI_API_KEY"] = os.environ["YUFEI_OPENAI_API_KEY"] # put your api key here
-def query(system, user_contents, assistant_contents, model='gpt-4', save_path=None, temperature=1, debug=False):
-    
-    for user_content, assistant_content in zip(user_contents, assistant_contents):
-        user_content = user_content.split("\n")
-        assistant_content = assistant_content.split("\n")
-        
-        for u in user_content:
-            print(u)
-        print("=====================================")
-        for a in assistant_content:
-            print(a)
-        print("=====================================")
+from dotenv import load_dotenv
 
-    for u in user_contents[-1].split("\n"):
-        print(u)
+load_dotenv()
 
-    if debug:
-        import pdb; pdb.set_trace()
-        return None
-
-    print("=====================================")
-
-    start = time.time()
-    
+def use_openai_api(assistant_contents, user_contents, system, model, temperature):
     num_assistant_mes = len(assistant_contents)
     messages = []
 
@@ -45,8 +26,67 @@ def query(system, user_contents, assistant_contents, model='gpt-4', save_path=No
     )
 
     result = ''
-    for choice in response.choices: 
-        result += choice.message.content 
+    for choice in response.choices:
+        result += choice.message.content
+
+    return result
+
+def use_anthropic_api(assistant_contents, user_contents, system, model, temperature):
+    num_assistant_mes = len(assistant_contents)
+    messages = []
+
+    for idx in range(num_assistant_mes):
+        messages.append({"role": "user", "content": [{"type": "text", "text": user_contents[idx]}]})
+        messages.append({"role": "assistant", "content": [{"type": "text", "text": assistant_contents[idx]}]})
+    messages.append({"role": "user", "content": [{"type": "text", "text": user_contents[-1]}]})
+
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+    message = client.messages.create(
+        model="claude-opus-4-20250514",
+        max_tokens=1000,
+        temperature=1,
+        system=system,
+        messages=messages
+    )
+
+    result = ''
+    for choice in message.content:
+        result += choice.text
+
+    return result
+
+
+def query(system, user_contents, assistant_contents, model='gpt-4', save_path=None, temperature=1, debug=False):
+
+    for user_content, assistant_content in zip(user_contents, assistant_contents):
+        user_content = user_content.split("\n")
+        assistant_content = assistant_content.split("\n")
+
+        for u in user_content:
+            print(u)
+        print("=====================================")
+        for a in assistant_content:
+            print(a)
+        print("=====================================")
+
+    for u in user_contents[-1].split("\n"):
+        print(u)
+
+    if debug:
+        import pdb; pdb.set_trace()
+        return None
+
+    print("=====================================")
+
+    start = time.time()
+
+    if os.getenv["TARET_MODEL_PROVDER"] == "openai":
+        result = use_openai_api(assistant_contents, user_contents, system, model, temperature)
+    elif os.getenv["TARET_MODEL_PROVDER"] == "anthropic":
+        result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
+    else:
+        raise ValueError("Invalid target model provider. Please set the environment variable TARET_MODEL_PROVDER to 'openai' or 'anthropic'.")
 
     end = time.time()
     used_time = end - start
