@@ -81,9 +81,9 @@ def query(system, user_contents, assistant_contents, model='gpt-4', save_path=No
 
     start = time.time()
 
-    if os.getenv["TARET_MODEL_PROVDER"] == "openai":
+    if os.getenv("TARET_MODEL_PROVDER") == "openai":
         result = use_openai_api(assistant_contents, user_contents, system, model, temperature)
-    elif os.getenv["TARET_MODEL_PROVDER"] == "anthropic":
+    elif os.getenv("TARET_MODEL_PROVDER") == "anthropic":
         result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
     else:
         raise ValueError("Invalid target model provider. Please set the environment variable TARET_MODEL_PROVDER to 'openai' or 'anthropic'.")
