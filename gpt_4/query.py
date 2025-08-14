@@ -3,6 +3,9 @@ import os
 import time
 import json
 import anthropic
+from ollama import chat
+from ollama import ChatResponse
+
 
 from dotenv import load_dotenv
 
@@ -35,6 +38,7 @@ def use_anthropic_api(assistant_contents, user_contents, system, model, temperat
     num_assistant_mes = len(assistant_contents)
     messages = []
 
+    messages.append({"role": "system", "content": [{"type": "text", "text": "{}".format(system)}]})
     for idx in range(num_assistant_mes):
         messages.append({"role": "user", "content": [{"type": "text", "text": user_contents[idx]}]})
         messages.append({"role": "assistant", "content": [{"type": "text", "text": assistant_contents[idx]}]})
@@ -53,6 +57,23 @@ def use_anthropic_api(assistant_contents, user_contents, system, model, temperat
     result = ''
     for choice in message.content:
         result += choice.text
+
+    return result
+
+
+def use_ollama_api(assistant_contents, user_contents, system, model="gemma3", temperature=0.7):
+    num_assistant_mes = len(assistant_contents)
+    messages = []
+
+    messages.append({"role": "system", "content": "{}".format(system)})
+    for idx in range(num_assistant_mes):
+        messages.append({"role": "user", "content": user_contents[idx]})
+        messages.append({"role": "assistant", "content": assistant_contents[idx]})
+    messages.append({"role": "user", "content": user_contents[-1]})
+
+    result = ''
+    for choice in response.choices:
+        result += choice.message.content
 
     return result
 
@@ -81,12 +102,12 @@ def query(system, user_contents, assistant_contents, model='gpt-4', save_path=No
 
     start = time.time()
 
-    if os.getenv("TARET_MODEL_PROVDER") == "openai":
+    if os.getenv("TARGET_MODEL_PROVIDER") == "openai":
         result = use_openai_api(assistant_contents, user_contents, system, model, temperature)
-    elif os.getenv("TARET_MODEL_PROVDER") == "anthropic":
+    elif os.getenv("TARGET_MODEL_PROVIDER") == "anthropic":
         result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
     else:
-        raise ValueError("Invalid target model provider. Please set the environment variable TARET_MODEL_PROVDER to 'openai' or 'anthropic'.")
+        raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai' or 'anthropic'.")
 
     end = time.time()
     used_time = end - start
