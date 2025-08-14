@@ -64,13 +64,15 @@ def use_anthropic_api(assistant_contents, user_contents, system, model, temperat
 def use_ollama_api(assistant_contents, user_contents, system, model="gemma3", temperature=0.7):
     num_assistant_mes = len(assistant_contents)
     messages = []
-
+    
     messages.append({"role": "system", "content": "{}".format(system)})
     for idx in range(num_assistant_mes):
         messages.append({"role": "user", "content": user_contents[idx]})
         messages.append({"role": "assistant", "content": assistant_contents[idx]})
     messages.append({"role": "user", "content": user_contents[-1]})
 
+    response: ChatResponse = chat(model=model, messages=messages)
+        
     result = ''
     for choice in response.choices:
         result += choice.message.content
@@ -105,6 +107,8 @@ def query(system, user_contents, assistant_contents, model='gpt-4', save_path=No
     if os.getenv("TARGET_MODEL_PROVIDER") == "openai":
         result = use_openai_api(assistant_contents, user_contents, system, model, temperature)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "anthropic":
+        result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
+    elif os.getenv("TARGET_MODEL_PROVIDER") == "ollama":
         result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
     else:
         raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai' or 'anthropic'.")
