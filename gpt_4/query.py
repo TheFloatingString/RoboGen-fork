@@ -38,7 +38,7 @@ def use_anthropic_api(assistant_contents, user_contents, system, model, temperat
     num_assistant_mes = len(assistant_contents)
     messages = []
 
-    messages.append({"role": "system", "content": [{"type": "text", "text": "{}".format(system)}]})
+    # messages.append({"role": "system", "content": [{"type": "text", "text": "{}".format(system)}]})
     for idx in range(num_assistant_mes):
         messages.append({"role": "user", "content": [{"type": "text", "text": user_contents[idx]}]})
         messages.append({"role": "assistant", "content": [{"type": "text", "text": assistant_contents[idx]}]})
@@ -61,7 +61,7 @@ def use_anthropic_api(assistant_contents, user_contents, system, model, temperat
     return result
 
 
-def use_ollama_api(assistant_contents, user_contents, system, model="gemma3", temperature=0.7):
+def use_ollama_api(assistant_contents, user_contents, system, model="llama3.2:3b", temperature=0.7):
     num_assistant_mes = len(assistant_contents)
     messages = []
     
@@ -74,8 +74,8 @@ def use_ollama_api(assistant_contents, user_contents, system, model="gemma3", te
     response: ChatResponse = chat(model=model, messages=messages)
         
     result = ''
-    for choice in response.choices:
-        result += choice.message.content
+    # TODO assume there is only a single choice
+    result += response.message.content
 
     return result
 
@@ -109,7 +109,7 @@ def query(system, user_contents, assistant_contents, model='gpt-4', save_path=No
     elif os.getenv("TARGET_MODEL_PROVIDER") == "anthropic":
         result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "ollama":
-        result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
+        result = use_ollama_api(assistant_contents, user_contents, system, "qwen3:8b", temperature)
     else:
         raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai' or 'anthropic'.")
 
