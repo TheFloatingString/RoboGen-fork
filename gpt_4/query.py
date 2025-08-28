@@ -129,15 +129,30 @@ def query(system, user_contents, assistant_contents, model='gpt-4', save_path=No
 
     print("=====================================")
 
+    # Check for model override from environment variable
+    provider = os.getenv("TARGET_MODEL_PROVIDER")
+    env_model = os.getenv("TARGET_MODEL")
+    
+    if env_model:
+        model = env_model
+    else:
+        # Use provider-specific defaults if no model specified
+        if provider == "anthropic" and (model is None):
+            model = "claude-3-5-sonnet-20241022"
+        elif provider == "ollama" and (model is None):
+            model = "llama3.1:8b"
+        elif provider == "groq" and (model is None):
+            model = "llama-3.3-70b-versatile"
+
     start = time.time()
 
-    if os.getenv("TARGET_MODEL_PROVIDER") == "openai":
+    if provider == "openai":
         result = use_openai_api(assistant_contents, user_contents, system, model, temperature)
-    elif os.getenv("TARGET_MODEL_PROVIDER") == "anthropic":
+    elif provider == "anthropic":
         result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
-    elif os.getenv("TARGET_MODEL_PROVIDER") == "ollama":
-        result = use_ollama_api(assistant_contents, user_contents, system, "qwen3:8b", temperature)
-    elif os.getenv("TARGET_MODEL_PROVIDER") == "groq":
+    elif provider == "ollama":
+        result = use_ollama_api(assistant_contents, user_contents, system, model, temperature)
+    elif provider == "groq":
         result = use_groq_api(assistant_contents, user_contents, system, model, temperature)
     else:
         raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai', 'anthropic', 'ollama', or 'groq'.")
