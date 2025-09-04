@@ -7,25 +7,7 @@ import pickle
 import datetime
 from ray.tune.logger import UnifiedLogger
 import time
-import wandb
-from ray.tune.integration.wandb import WandbLoggerCallback
 
-
-def init_wandb(project_name="RoboGen-RL", experiment_name=None, config=None):
-    """Initialize wandb with proper configuration"""
-    if experiment_name is None:
-        ts = time.time()
-        time_string = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d-%H-%M-%S")
-        experiment_name = f"RL_experiment_{time_string}"
-    
-    wandb.init(
-        project=project_name,
-        name=experiment_name,
-        config=config,
-        reinit=True,
-        settings=wandb.Settings(start_method="fork")
-    )
-    return wandb.run
 
 
 def custom_log_creator(custom_path, custom_str):
@@ -116,26 +98,9 @@ def train(
     env_config={},
     eval_interval=20000,
     render=False,
-    wandb_config=None,
 ):
     if not ray.is_initialized():
         ray.init(num_cpus=8, ignore_reinit_error=True, log_to_driver=False)
-    
-    # Initialize wandb if config is provided
-    if wandb_config is not None:
-        wandb_run = init_wandb(
-            project_name=wandb_config.get("project", "RoboGen-RL"),
-            experiment_name=wandb_config.get("experiment_name", f"{algo}_{env_name}"),
-            config={
-                "algorithm": algo,
-                "env_name": env_name,
-                "timesteps_total": timesteps_total,
-                "seed": seed,
-                "env_config": env_config,
-                "eval_interval": eval_interval,
-                **wandb_config.get("extra_config", {})
-            }
-        )
     
     agent, checkpoint_path = load_policy(
         algo, env_name, load_policy_path, env_config=env_config, seed=seed
@@ -156,36 +121,6 @@ def train(
     while timesteps < timesteps_total:
         result = agent.train()
         timesteps = result["timesteps_total"]
-        
-        # Log training metrics to wandb
-        if wandb_config is not None:
-            training_metrics = {
-                "training/iteration": result['training_iteration'],
-                "training/timesteps_total": result['timesteps_total'],
-                "training/time_total_s": result['time_total_s'],
-                "training/fps": result['timesteps_total'] / result['time_total_s'],
-                "training/episode_reward_mean": result['episode_reward_mean'],
-                "training/episode_reward_min": result['episode_reward_min'],
-                "training/episode_reward_max": result['episode_reward_max'],
-                "training/episode_len_mean": result.get('episode_len_mean', 0),
-            }
-            
-            # Log algorithm-specific metrics
-            if algo == "ppo":
-                training_metrics.update({
-                    "training/policy_loss": result.get('info', {}).get('learner', {}).get('default_policy', {}).get('policy_loss', 0),
-                    "training/value_function_loss": result.get('info', {}).get('learner', {}).get('default_policy', {}).get('vf_loss', 0),
-                    "training/entropy": result.get('info', {}).get('learner', {}).get('default_policy', {}).get('entropy', 0),
-                    "training/kl": result.get('info', {}).get('learner', {}).get('default_policy', {}).get('kl', 0),
-                })
-            elif algo == "sac":
-                training_metrics.update({
-                    "training/actor_loss": result.get('info', {}).get('learner', {}).get('default_policy', {}).get('actor_loss', 0),
-                    "training/critic_loss": result.get('info', {}).get('learner', {}).get('default_policy', {}).get('critic_loss', 0),
-                    "training/alpha": result.get('info', {}).get('learner', {}).get('default_policy', {}).get('alpha', 0),
-                })
-            
-            wandb.log(training_metrics, step=timesteps)
         
         print(
             f"Iteration: {result['training_iteration']}, total timesteps: {result['timesteps_total']}, total time: {result['time_total_s']:.1f}, FPS: {result['timesteps_total'] / result['time_total_s']:.1f}, mean reward: {result['episode_reward_mean']:.1f}, min/max reward: {result['episode_reward_min']:.1f}/{result['episode_reward_max']:.1f}"
@@ -232,38 +167,12 @@ def train(
 
             print("evaluating at {} return is {}".format(timesteps, ret))
             
-            # Log evaluation metrics to wandb
-            if wandb_config is not None:
-                eval_metrics = {
-                    "evaluation/return": ret,
-                    "evaluation/episode_length": len(rgbs),
-                    "evaluation/timesteps": timesteps,
-                    "evaluation/best_return": best_ret if ret <= best_ret else ret,
-                }
-                wandb.log(eval_metrics, step=timesteps)
-                
-                # Log evaluation video/gif to wandb
-                if len(rgbs) > 0:
-                    # Save temporary gif for wandb
-                    temp_gif_path = os.path.join(state_save_path, "temp_eval.gif")
-                    save_numpy_as_gif(np.array(rgbs), temp_gif_path)
-                    wandb.log({
-                        "evaluation/episode_video": wandb.Video(temp_gif_path, fps=4, format="gif")
-                    }, step=timesteps)
-            
             eval_time += 1
             if ret > best_ret:
                 best_ret = ret
                 best_model_path = agent.save(best_model_save_path)
                 best_rgbs = rgbs
                 best_state_files = state_files
-                
-                # Log new best model info to wandb
-                if wandb_config is not None:
-                    wandb.log({
-                        "evaluation/new_best_return": ret,
-                        "evaluation/best_model_timesteps": timesteps,
-                    }, step=timesteps)
                 
                 for idx, state in enumerate(states):
                     with open(
@@ -283,12 +192,6 @@ def train(
                     "{}/{}.gif".format(best_state_save_path, "best"),
                 )
                 
-                # Log best performance video to wandb
-                if wandb_config is not None:
-                    best_gif_path = "{}/{}.gif".format(best_state_save_path, "best")
-                    wandb.log({
-                        "evaluation/best_episode_video": wandb.Video(best_gif_path, fps=4, format="gif")
-                    }, step=timesteps)
 
     env.disconnect()
     return best_model_path, best_rgbs, best_state_files
@@ -364,9 +267,6 @@ def run_RL(
     use_gpt_joint_angle=True,
     use_gpt_spatial_relationship=True,
     use_distractor=False,
-    wandb_project="RoboGen-RL",
-    wandb_experiment_name=None,
-    use_wandb=True,
 ):
     env_name = task_name
 
@@ -388,25 +288,6 @@ def run_RL(
     timesteps_total = 1000000
     eval_interval = 20000
 
-    # Setup wandb configuration
-    wandb_config = None
-    if use_wandb:
-        wandb_config = {
-            "project": wandb_project,
-            "experiment_name": wandb_experiment_name or f"{algo}_{task_name}",
-            "extra_config": {
-                "task_config_path": task_config_path,
-                "solution_path": solution_path,
-                "action_space": action_space,
-                "randomize": randomize,
-                "use_bard": use_bard,
-                "obj_id": obj_id,
-                "use_gpt_size": use_gpt_size,
-                "use_gpt_joint_angle": use_gpt_joint_angle,
-                "use_gpt_spatial_relationship": use_gpt_spatial_relationship,
-                "use_distractor": use_distractor,
-            }
-        }
 
     tune.register_env(env_name, lambda config: make_env(config))
     best_policy_path, rgbs, best_traj_state_paths = train(
@@ -419,24 +300,7 @@ def run_RL(
         env_config=env_config,
         render=render,
         eval_interval=eval_interval,
-        wandb_config=wandb_config,
     )
 
-    # Final logging to wandb
-    if use_wandb and wandb.run is not None:
-        wandb.log({
-            "final/best_policy_path": best_policy_path,
-            "final/training_completed": True,
-        })
-        
-        # Log final best trajectory if available
-        if rgbs is not None and len(rgbs) > 0:
-            final_gif_path = os.path.join(save_path, "final_best.gif")
-            save_numpy_as_gif(np.array(rgbs), final_gif_path)
-            wandb.log({
-                "final/best_trajectory_video": wandb.Video(final_gif_path, fps=4, format="gif")
-            })
-        
-        wandb.finish()
 
     return best_policy_path, rgbs, best_traj_state_paths
