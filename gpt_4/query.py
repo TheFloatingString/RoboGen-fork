@@ -3,8 +3,9 @@ import os
 import time
 import json
 import anthropic
-from ollama import chat
-from ollama import ChatResponse
+# from ollama import chat
+# from ollama import ChatResponse
+from groq import Groq
 
 
 from dotenv import load_dotenv
@@ -12,6 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def use_openai_api(assistant_contents, user_contents, system, model, temperature):
+    print(f"choice of model: {model}")
     num_assistant_mes = len(assistant_contents)
     messages = []
 
@@ -47,7 +49,7 @@ def use_anthropic_api(assistant_contents, user_contents, system, model, temperat
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     message = client.messages.create(
-        model="claude-opus-4-20250514",
+        model=model,
         max_tokens=1000,
         temperature=1,
         system=system,
@@ -61,7 +63,31 @@ def use_anthropic_api(assistant_contents, user_contents, system, model, temperat
     return result
 
 
-def use_ollama_api(assistant_contents, user_contents, system, model="llama3.2:3b", temperature=0.7):
+def use_groq_api(assistant_contents, user_contents, system, model, temperature=0.7):
+    num_assistant_mes = len(assistant_contents)
+    messages = []
+    
+    messages.append({"role": "system", "content": "{}".format(system)})
+    for idx in range(num_assistant_mes):
+        messages.append({"role": "user", "content": user_contents[idx]})
+        messages.append({"role": "assistant", "content": assistant_contents[idx]})
+    messages.append({"role": "user", "content": user_contents[-1]})
+
+    client = Groq(api_key=os.environ["GROQ_API_KEY"])
+    
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature
+    )
+    
+    result = ''
+    result += response.choices[0].message.content
+    
+    return result
+
+
+def use_ollama_api(assistant_contents, user_contents, system, model, temperature=0.7):
     num_assistant_mes = len(assistant_contents)
     messages = []
     
@@ -80,7 +106,25 @@ def use_ollama_api(assistant_contents, user_contents, system, model="llama3.2:3b
     return result
 
 
-def query(system, user_contents, assistant_contents, model='gpt-4', save_path=None, temperature=1, debug=False):
+def query(system, user_contents, assistant_contents, model=None, save_path=None, temperature=1, debug=False):
+    # Use MODEL environment variable if provided, otherwise use the passed model parameter or defaults
+    model = os.getenv("MODEL")
+    print(f"env var for MODEL: {model}")
+
+    if model is None:
+        model = os.getenv('MODEL')
+        if model is None:
+            # Set default models based on provider
+            if os.getenv("TARGET_MODEL_PROVIDER") == "openai":
+                model = 'gpt-4'
+            elif os.getenv("TARGET_MODEL_PROVIDER") == "anthropic":
+                model = 'claude-opus-4-20250514'
+            elif os.getenv("TARGET_MODEL_PROVIDER") == "groq":
+                model = 'llama-3.3-70b-versatile'
+            elif os.getenv("TARGET_MODEL_PROVIDER") == "ollama":
+                model = 'llama3.2:3b'
+            else:
+                model = 'gpt-4'  # fallback default
 
     for user_content, assistant_content in zip(user_contents, assistant_contents):
         user_content = user_content.split("\n")
@@ -105,13 +149,15 @@ def query(system, user_contents, assistant_contents, model='gpt-4', save_path=No
     start = time.time()
 
     if os.getenv("TARGET_MODEL_PROVIDER") == "openai":
-        result = use_openai_api(assistant_contents, user_contents, system, model, temperature)
+        result = use_openai_api(assistant_contents, user_contents, system, model, temperature=1)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "anthropic":
-        result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
+        result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature=1)
+    elif os.getenv("TARGET_MODEL_PROVIDER") == "groq":
+        result = use_groq_api(assistant_contents, user_contents, system, model, temperature=1)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "ollama":
-        result = use_ollama_api(assistant_contents, user_contents, system, "qwen3:8b", temperature)
+        result = use_ollama_api(assistant_contents, user_contents, system, model, temperature=1)
     else:
-        raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai' or 'anthropic'.")
+        raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai', 'anthropic', 'groq', or 'ollama'.")
 
     end = time.time()
     used_time = end - start
