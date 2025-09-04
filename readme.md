@@ -41,7 +41,8 @@ Genesis is still under active development and will be released soon. This repo c
 Branching order:
 
 ```bash
-"feat/models" -> "feat/wandb" -> "main"
+"feat/models" -> "main"
+"feat/wandb" -> "main"
 ```
 
 ## Table of Contents
