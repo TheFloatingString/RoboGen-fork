@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def use_openai_api(assistant_contents, user_contents, system, model, temperature):
+    print(f"choice of model: {model}")
     num_assistant_mes = len(assistant_contents)
     messages = []
 
@@ -107,6 +108,9 @@ def use_ollama_api(assistant_contents, user_contents, system, model, temperature
 
 def query(system, user_contents, assistant_contents, model=None, save_path=None, temperature=1, debug=False):
     # Use MODEL environment variable if provided, otherwise use the passed model parameter or defaults
+    model = os.getenv("MODEL")
+    print(f"env var for MODEL: {model}")
+
     if model is None:
         model = os.getenv('MODEL')
         if model is None:
@@ -145,13 +149,13 @@ def query(system, user_contents, assistant_contents, model=None, save_path=None,
     start = time.time()
 
     if os.getenv("TARGET_MODEL_PROVIDER") == "openai":
-        result = use_openai_api(assistant_contents, user_contents, system, model, temperature)
+        result = use_openai_api(assistant_contents, user_contents, system, model, temperature=1)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "anthropic":
-        result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature)
+        result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature=1)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "groq":
-        result = use_groq_api(assistant_contents, user_contents, system, model, temperature)
+        result = use_groq_api(assistant_contents, user_contents, system, model, temperature=1)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "ollama":
-        result = use_ollama_api(assistant_contents, user_contents, system, model, temperature)
+        result = use_ollama_api(assistant_contents, user_contents, system, model, temperature=1)
     else:
         raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai', 'anthropic', 'groq', or 'ollama'.")
 
