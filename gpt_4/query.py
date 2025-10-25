@@ -30,6 +30,10 @@ def use_openai_api(assistant_contents, user_contents, system, model, temperature
         temperature=temperature
     )
 
+    # append string of all messages to file
+    with open("data/debug/gpt_response.json", "w") as f:
+        json.dump(response, f, indent=4)
+
     result = ''
     for choice in response.choices:
         result += choice.message.content
@@ -87,10 +91,37 @@ def use_groq_api(assistant_contents, user_contents, system, model, temperature=0
     return result
 
 
+def use_novita_api(assistant_contents, user_contents, system, model, temperature=0.7):
+    print(f"choice of model: {model}")
+    num_assistant_mes = len(assistant_contents)
+    messages = []
+
+    messages.append({"role": "system", "content": "{}".format(system)})
+    for idx in range(num_assistant_mes):
+        messages.append({"role": "user", "content": user_contents[idx]})
+        messages.append({"role": "assistant", "content": assistant_contents[idx]})
+    messages.append({"role": "user", "content": user_contents[-1]})
+
+    openai.api_key = os.environ["NOVITA_API_KEY"]
+    openai.api_base = "https://api.novita.ai/openai/v1"
+
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=messages,
+        temperature=temperature
+    )
+
+    result = ''
+    for choice in response.choices:
+        result += choice.message.content
+
+    return result
+
+
 def use_ollama_api(assistant_contents, user_contents, system, model, temperature=0.7):
     num_assistant_mes = len(assistant_contents)
     messages = []
-    
+
     messages.append({"role": "system", "content": "{}".format(system)})
     for idx in range(num_assistant_mes):
         messages.append({"role": "user", "content": user_contents[idx]})
@@ -98,7 +129,7 @@ def use_ollama_api(assistant_contents, user_contents, system, model, temperature
     messages.append({"role": "user", "content": user_contents[-1]})
 
     response: ChatResponse = chat(model=model, messages=messages)
-        
+
     result = ''
     # TODO assume there is only a single choice
     result += response.message.content
@@ -123,6 +154,8 @@ def query(system, user_contents, assistant_contents, model=None, save_path=None,
                 model = 'llama-3.3-70b-versatile'
             elif os.getenv("TARGET_MODEL_PROVIDER") == "ollama":
                 model = 'llama3.2:3b'
+            elif os.getenv("TARGET_MODEL_PROVIDER") == "novita":
+                model = 'zai-org/glm-4.6'
             else:
                 model = 'gpt-4'  # fallback default
 
@@ -154,10 +187,12 @@ def query(system, user_contents, assistant_contents, model=None, save_path=None,
         result = use_anthropic_api(assistant_contents, user_contents, system, model, temperature=1)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "groq":
         result = use_groq_api(assistant_contents, user_contents, system, model, temperature=1)
+    elif os.getenv("TARGET_MODEL_PROVIDER") == "novita":
+        result = use_novita_api(assistant_contents, user_contents, system, model, temperature=1)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "ollama":
         result = use_ollama_api(assistant_contents, user_contents, system, model, temperature=1)
     else:
-        raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai', 'anthropic', 'groq', or 'ollama'.")
+        raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai', 'anthropic', 'groq', 'novita', or 'ollama'.")
 
     end = time.time()
     used_time = end - start
