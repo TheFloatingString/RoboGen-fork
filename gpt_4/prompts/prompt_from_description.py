@@ -238,7 +238,13 @@ def expand_task_name(
     model_provider = os.getenv("TARGET_MODEL_PROVIDER")
 
     # Get the actual model name from environment if set (matches query.py line 169)
-    actual_model = os.getenv("MODEL") or model
+    # actual_model = os.getenv("MODEL") or model
+    if model_provider == "openrouter":
+        actual_model = "glm-4.6"
+    elif model_provider == "openai":
+        actual_mdoel = "gpt-4"
+    else:
+        raise NotImplementedError(f"model provider logging not implemented for `{model_provider}`")
 
     prompt_metadata = {
         "model_name": actual_model,
