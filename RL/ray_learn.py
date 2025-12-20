@@ -433,6 +433,56 @@ def run_RL(
         except Exception as e:
             warnings.warn(f"Failed to read prompt_metadata.yaml: {e}. Skipping prompt metadata logging to wandb.")
 
+        # Read and log substeps.txt if available
+        substeps_path = os.path.join(solution_path, "substeps.txt")
+        try:
+            if os.path.exists(substeps_path):
+                with open(substeps_path, 'r') as f:
+                    substeps_content = f.read()
+
+                # Store substeps as a list for better wandb visualization
+                substeps_list = [line.strip() for line in substeps_content.split('\n') if line.strip()]
+                wandb_config["extra_config"]["substeps"] = substeps_list
+                wandb_config["extra_config"]["substeps_count"] = len(substeps_list)
+
+                print(f"Loaded substeps: {len(substeps_list)} steps found")
+            else:
+                warnings.warn(f"substeps.txt not found at {substeps_path}. Skipping substeps logging to wandb.")
+        except Exception as e:
+            warnings.warn(f"Failed to read substeps.txt: {e}. Skipping substeps logging to wandb.")
+
+        # Read and log substep_types.txt if available
+        substep_types_path = os.path.join(solution_path, "substep_types.txt")
+        try:
+            if os.path.exists(substep_types_path):
+                with open(substep_types_path, 'r') as f:
+                    substep_types_content = f.read()
+
+                substep_types_list = [line.strip() for line in substep_types_content.split('\n') if line.strip()]
+                wandb_config["extra_config"]["substep_types"] = substep_types_list
+
+                print(f"Loaded substep types: {len(substep_types_list)} types found")
+            else:
+                warnings.warn(f"substep_types.txt not found at {substep_types_path}. Skipping substep types logging to wandb.")
+        except Exception as e:
+            warnings.warn(f"Failed to read substep_types.txt: {e}. Skipping substep types logging to wandb.")
+
+        # Read and log action_spaces.txt if available
+        action_spaces_path = os.path.join(solution_path, "action_spaces.txt")
+        try:
+            if os.path.exists(action_spaces_path):
+                with open(action_spaces_path, 'r') as f:
+                    action_spaces_content = f.read()
+
+                action_spaces_list = [line.strip() for line in action_spaces_content.split('\n') if line.strip()]
+                wandb_config["extra_config"]["action_spaces"] = action_spaces_list
+
+                print(f"Loaded action spaces: {len(action_spaces_list)} action spaces found")
+            else:
+                warnings.warn(f"action_spaces.txt not found at {action_spaces_path}. Skipping action spaces logging to wandb.")
+        except Exception as e:
+            warnings.warn(f"Failed to read action_spaces.txt: {e}. Skipping action spaces logging to wandb.")
+
     tune.register_env(env_name, lambda config: make_env(config))
     best_policy_path, rgbs, best_traj_state_paths = train(
         env_name,
