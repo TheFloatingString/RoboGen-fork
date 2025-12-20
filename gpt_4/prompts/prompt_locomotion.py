@@ -1,4 +1,5 @@
 import os
+from gpt_4.prompts.utils import sanitize_description_for_filename
 
 user_contents = [
 """
@@ -256,9 +257,9 @@ def generate_task_locomotion(model_dict, temperature_dict, meta_path='generated_
     for task, reward in zip(tasks, rewards):
         print("task is: ", task)
         task_description = task.split(": ")[1]
-        description = f"{task_description}".replace(" ", "_").replace(".", "").replace(",", "").replace("(", "").replace(")", "")
+        description = sanitize_description_for_filename(task_description, max_length=20)
 
-        
+
         solution_path = os.path.join(save_path, "task_{}".format(description))
         if not os.path.exists(solution_path):
             os.makedirs(solution_path)

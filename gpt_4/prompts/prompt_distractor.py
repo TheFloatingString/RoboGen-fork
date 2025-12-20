@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import json
 from gpt_4.verification import check_text_similarity
-from gpt_4.prompts.utils import parse_response_to_get_yaml
+from gpt_4.prompts.utils import parse_response_to_get_yaml, sanitize_description_for_filename
 
 user_contents = [
 """
@@ -138,7 +138,7 @@ Initial config:
             
             new_yaml.append(obj)
 
-        description = f"{task_description}".replace(" ", "_").replace(".", "").replace(",", "").replace("(", "").replace(")", "")
+        description = sanitize_description_for_filename(task_description, max_length=20)
         save_name =  description + '.yaml'
         distractor_save_path = os.path.join(parent_folder, save_name.replace(".yaml", "_distractor.yaml"))
         if os.path.exists(distractor_save_path):

@@ -7,6 +7,21 @@ from gpt_4.prompts.prompt_spatial_relationship import query_spatial_relationship
 from gpt_4.query import query
 from gpt_4.adjust_size import adjust_size_v2
 
+
+def sanitize_description_for_filename(task_description, max_length=20):
+    """Convert task description to a filename-safe string with max length.
+
+    Args:
+        task_description: The task description to sanitize
+        max_length: Maximum length for the filename (default: 20)
+
+    Returns:
+        Sanitized description string truncated to max_length
+    """
+    description = f"{task_description}".replace(" ", "_").replace(".", "").replace(",", "").replace("(", "").replace(")", "")
+    return description[:max_length]
+
+
 task_yaml_config_prompt = """
 I need you to describe the initial scene configuration for a given task in the following format, using a yaml file. This yaml file will help build the task in a simulator. The task is for a mobile Franka panda robotic arm to learn a manipulation skill in the simulator. The Franka panda arm is mounted on a floor, at location (1, 1, 0). It can move freely on the floor. The z axis is the gravity axis. 
 
@@ -263,7 +278,7 @@ def parse_response_to_get_yaml(response, task_description, save_path, temperatur
                 yaml_string.append(response[l_idx_2])
 
             yaml_string = '\n'.join(yaml_string)
-            description = f"{task_description}".replace(" ", "_").replace(".", "").replace(",", "").replace("(", "").replace(")", "")
+            description = sanitize_description_for_filename(task_description, max_length=20)
             save_name =  description + '.yaml'
 
             print("=" * 30)
@@ -337,7 +352,7 @@ def build_task_given_text(object_category, task_name, task_description, addition
     task_yaml_response = query(system, [task_yaml_config_prompt_filled], [], save_path=save_path, debug=False, 
                             temperature=temperature_dict["yaml"], model=model_dict["yaml"])
     # NOTE: parse the yaml file and generate the task in the simulator.
-    description = f"{task_name}_{task_description}".replace(" ", "_").replace(".", "").replace(",", "")
+    description = sanitize_description_for_filename(f"{task_name}_{task_description}", max_length=20)
     task_yaml_response = task_yaml_response.split("\n")
     size_save_path = os.path.join(save_folder, "gpt_response/size_{}.json".format(task_name))
     parsed_yaml, save_name = parse_response_to_get_yaml(task_yaml_response, description, save_path=size_save_path, 
