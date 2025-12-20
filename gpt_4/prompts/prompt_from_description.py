@@ -2,6 +2,7 @@ from gpt_4.query import query
 from gpt_4.prompts.utils import build_task_given_text
 from gpt_4.prompts.prompt_distractor import generate_distractor
 import time, datetime, os, copy
+import yaml
 
 user_contents = [
     """
@@ -231,6 +232,29 @@ def expand_task_name(
         temperature=0,
         model=model,
     )
+
+    ### Save prompt metadata to YAML
+    # Get model provider from environment variable (matches query.py logic)
+    model_provider = os.getenv("TARGET_MODEL_PROVIDER")
+
+    # Get the actual model name from environment if set (matches query.py line 169)
+    actual_model = os.getenv("MODEL") or model
+
+    prompt_metadata = {
+        "model_name": actual_model,
+        "model_provider": model_provider,
+        "temperature": temperate,
+        "system_prompt": system,
+        "user_prompt_template": user_contents[0],
+        "filled_prompt": task_user_contents_filled,
+        "task_name": task_name,
+        "object_category": object_category,
+        "object_path": object_path,
+    }
+
+    metadata_save_path = os.path.join(save_folder, "prompt_metadata.yaml")
+    with open(metadata_save_path, 'w') as f:
+        yaml.dump(prompt_metadata, f, indent=4, default_flow_style=False)
 
     ### parse the response
     task_description, additional_objects, links, joints = parse_response(task_response)
