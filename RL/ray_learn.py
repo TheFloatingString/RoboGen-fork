@@ -9,6 +9,8 @@ from ray.tune.logger import UnifiedLogger
 import time
 import wandb
 from ray.tune.integration.wandb import WandbLoggerCallback
+import yaml
+import warnings
 
 
 def init_wandb(project_name="RoboGen-RL", experiment_name=None, config=None):
@@ -407,6 +409,29 @@ def run_RL(
                 "use_distractor": use_distractor,
             }
         }
+
+        # Read and log prompt metadata if available
+        task_config_dir = os.path.dirname(task_config_path)
+        prompt_metadata_path = os.path.join(task_config_dir, "prompt_metadata.yaml")
+
+        try:
+            if os.path.exists(prompt_metadata_path):
+                with open(prompt_metadata_path, 'r') as f:
+                    prompt_metadata = yaml.safe_load(f)
+
+                # Add prompt metadata to wandb config
+                if prompt_metadata:
+                    wandb_config["extra_config"]["prompt_model_name"] = prompt_metadata.get("model_name", "unknown")
+                    wandb_config["extra_config"]["prompt_model_provider"] = prompt_metadata.get("model_provider", "unknown")
+                    wandb_config["extra_config"]["prompt_task_name"] = prompt_metadata.get("task_name", "unknown")
+                    wandb_config["extra_config"]["prompt_temperature"] = prompt_metadata.get("temperature", "unknown")
+                    wandb_config["extra_config"]["prompt_object_category"] = prompt_metadata.get("object_category", "unknown")
+
+                    print(f"Loaded prompt metadata: model={prompt_metadata.get('model_name')}, provider={prompt_metadata.get('model_provider')}, task={prompt_metadata.get('task_name')}")
+            else:
+                warnings.warn(f"prompt_metadata.yaml not found at {prompt_metadata_path}. Skipping prompt metadata logging to wandb.")
+        except Exception as e:
+            warnings.warn(f"Failed to read prompt_metadata.yaml: {e}. Skipping prompt metadata logging to wandb.")
 
     tune.register_env(env_name, lambda config: make_env(config))
     best_policy_path, rgbs, best_traj_state_paths = train(
