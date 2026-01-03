@@ -529,7 +529,7 @@ gym.register(
 
 def decompose_and_generate_reward_or_primitive(task_name, task_description, initial_config, articulation_tree, semantics, 
                               involved_links, involved_joints, object_id, yaml_config_path, save_path, 
-                              temperature=0.4, model='gpt-4'):
+                              temperature=0.4, model='gpt-4.1'):
     query_task = """
 Task name: {}
 Description: {}

@@ -5,7 +5,7 @@ import re
 from manipulation.utils import parse_center
 import copy
 
-def adjust_size_v2(task_description, yaml_string, save_path, temperature=0.2, model='gpt-4'):
+def adjust_size_v2(task_description, yaml_string, save_path, temperature=0.2, model='gpt-4.1'):
     # extract object names and sizes
     object_names = []
     object_sizes = []

@@ -198,7 +198,7 @@ class SimpleEnv(gym.Env):
         self.take_step(action)
         obs = self._get_obs()
         done, info = self._get_done_info()
-        reward = self._compute_reward() ### NOTE: to be implemented by gpt-4
+        reward = self._compute_reward() ### NOTE: to be implemented by gpt-4.1
         success = False
         self.success = success
         return obs, reward, done, info
@@ -218,7 +218,7 @@ class SimpleEnv(gym.Env):
 
         obs = self._get_obs()
         done, info = self._get_done_info()
-        reward = self._compute_reward() ### NOTE: to be implemented by gpt-4
+        reward = self._compute_reward() ### NOTE: to be implemented by gpt-4.1
         return obs, reward, done, info, rgbs, states
 
     def take_step(self, action):

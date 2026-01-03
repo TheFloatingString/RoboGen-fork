@@ -267,7 +267,7 @@ Description: {}
 Objects involved: {}
 """
 
-def parse_response_to_get_yaml(response, task_description, save_path, temperature=0.2, model='gpt-4'):
+def parse_response_to_get_yaml(response, task_description, save_path, temperature=0.2, model='gpt-4.1'):
     yaml_string = []
     for l_idx, line in enumerate(response):
         if "```yaml" in line:
@@ -328,12 +328,12 @@ def build_task_given_text(object_category, task_name, task_description, addition
                           articulation_tree_filled, semantics_filled, object_path, save_folder, temperature_dict, model_dict=None):
     if model_dict is None:
         model_dict = {
-            "task_generation": "gpt-4",
-            "reward": "gpt-4",
-            "yaml": "gpt-4",
-            "size": "gpt-4",
-            "joint": "gpt-4",
-            "spatial_relationship": "gpt-4"
+            "task_generation": "gpt-4.1",
+            "reward": "gpt-4.1",
+            "yaml": "gpt-4.1",
+            "size": "gpt-4.1",
+            "joint": "gpt-4.1",
+            "spatial_relationship": "gpt-4.1"
         }
 
     task_yaml_config_prompt_filled = copy.deepcopy(task_yaml_config_prompt)

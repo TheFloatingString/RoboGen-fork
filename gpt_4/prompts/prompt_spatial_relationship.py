@@ -228,7 +228,7 @@ Can you do it for the following task:
 assistant_contents = []
 
 def query_spatial_relationship(task_name, task_description, involved_objects, articulation_tree, semantics, links, joints, substeps, save_path=None, 
-                               temperature=0.1, model='gpt-4'):
+                               temperature=0.1, model='gpt-4.1'):
     input = """
 Task Name: {}
 Description: {}
@@ -272,7 +272,7 @@ substeps:
 
     return spatial_relationships
 
-def query_spatial_relationship_rigid(task_name, involved_objects, substeps, save_path=None, temperature=0.1, model='gpt-4'):
+def query_spatial_relationship_rigid(task_name, involved_objects, substeps, save_path=None, temperature=0.1, model='gpt-4.1'):
     input = """
 Task Name: {}
 Objects involved: {}

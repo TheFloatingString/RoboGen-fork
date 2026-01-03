@@ -24,12 +24,12 @@ temperature_dict = {
 }
 
 model_dict = {
-    "task_generation": "gpt-4",
-    "reward": "gpt-4",
-    "yaml": "gpt-4",
-    "size": "gpt-4",
-    "joint": "gpt-4",
-    "spatial_relationship": "gpt-4"
+    "task_generation": "gpt-4.1",
+    "reward": "gpt-4.1",
+    "yaml": "gpt-4.1",
+    "size": "gpt-4.1",
+    "joint": "gpt-4.1",
+    "spatial_relationship": "gpt-4.1"
 }
 
 

@@ -181,7 +181,7 @@ def expand_task_name(
     object_path,
     meta_path="generated_task_from_description",
     temperate=0,
-    model="gpt-4",
+    model="gpt-4.1",
 ):
     ts = time.time()
     time_string = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d-%H-%M-%S")
@@ -242,7 +242,7 @@ def expand_task_name(
     if model_provider == "openrouter":
         actual_model = "glm-4.6"
     elif model_provider == "openai":
-        actual_mdoel = "gpt-4"
+        actual_mdoel = "gpt-4.1"
     else:
         raise NotImplementedError(f"model provider logging not implemented for `{model_provider}`")
 
@@ -284,7 +284,7 @@ def generate_from_task_name(
     model_dict=None,
     meta_path="generated_task_from_description",
 ):
-    expansion_model = model_dict.get("expansion", "gpt-4")
+    expansion_model = model_dict.get("expansion", "gpt-4.1")
     expansion_temperature = temperature_dict.get("expansion", 0)
     (
         task_description,
@@ -341,11 +341,11 @@ if __name__ == "__main__":
     }
 
     model_dict = {
-        "reward": "gpt-4",
-        "yaml": "gpt-4",
-        "size": "gpt-4",
-        "joint": "gpt-4",
-        "spatial_relationship": "gpt-4",
+        "reward": "gpt-4.1",
+        "yaml": "gpt-4.1",
+        "size": "gpt-4.1",
+        "joint": "gpt-4.1",
+        "spatial_relationship": "gpt-4.1",
     }
 
     meta_path = "generated_task_from_description"

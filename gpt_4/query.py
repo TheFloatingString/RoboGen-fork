@@ -174,7 +174,7 @@ def query(system, user_contents, assistant_contents, model=None, save_path=None,
         if model is None:
             # Set default models based on provider
             if os.getenv("TARGET_MODEL_PROVIDER") == "openai":
-                model = 'gpt-4'
+                model = 'gpt-4.1'
             elif os.getenv("TARGET_MODEL_PROVIDER") == "anthropic":
                 model = 'claude-opus-4-20250514'
             elif os.getenv("TARGET_MODEL_PROVIDER") == "groq":
@@ -186,7 +186,7 @@ def query(system, user_contents, assistant_contents, model=None, save_path=None,
             elif os.getenv("TARGET_MODEL_PROVIDER") == "openrouter":
                 model = 'z-ai/glm-4.6'
             else:
-                model = 'gpt-4'  # fallback default
+                model = 'gpt-4.1'  # fallback default
 
     for user_content, assistant_content in zip(user_contents, assistant_contents):
         user_content = user_content.split("\n")

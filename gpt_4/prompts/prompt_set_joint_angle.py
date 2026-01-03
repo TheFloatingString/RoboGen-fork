@@ -192,7 +192,7 @@ Can you do it for the following task:
 assistant_contents = []
 
 def query_joint_angle(task_name, task_description, articulation_tree, semantics, links, joints, substeps, save_path=None, 
-                      temperature=0.1, model='gpt-4'):
+                      temperature=0.1, model='gpt-4.1'):
     input = """
 Task Name: {}
 Description: {}
