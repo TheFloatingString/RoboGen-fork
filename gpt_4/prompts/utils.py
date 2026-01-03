@@ -1,6 +1,7 @@
 import copy
 import os
 import yaml
+import warnings
 from gpt_4.prompts.prompt_manipulation_reward_primitive import decompose_and_generate_reward_or_primitive
 from gpt_4.prompts.prompt_set_joint_angle import query_joint_angle
 from gpt_4.prompts.prompt_spatial_relationship import query_spatial_relationship
@@ -268,6 +269,12 @@ Objects involved: {}
 """
 
 def parse_response_to_get_yaml(response, task_description, save_path, temperature=0.2, model='gpt-4.1'):
+    """
+    Parse YAML configuration from model response.
+
+    Raises:
+        ValueError: If no YAML block found in response
+    """
     yaml_string = []
     for l_idx, line in enumerate(response):
         if "```yaml" in line:
@@ -278,6 +285,10 @@ def parse_response_to_get_yaml(response, task_description, save_path, temperatur
                 yaml_string.append(response[l_idx_2])
 
             yaml_string = '\n'.join(yaml_string)
+
+            if not yaml_string.strip():
+                raise ValueError("Found YAML block markers but content is empty")
+
             description = sanitize_description_for_filename(task_description, max_length=20)
             save_name =  description + '.yaml'
 
@@ -287,6 +298,10 @@ def parse_response_to_get_yaml(response, task_description, save_path, temperatur
             parsed_size_yaml = adjust_size_v2(description, yaml_string, save_path, temperature, model=model)
 
             return parsed_size_yaml, save_name
+
+    # If we get here, no YAML block was found
+    response_preview = '\n'.join(response[:10]) if isinstance(response, list) else str(response)[:500]
+    raise ValueError(f"No YAML block (```yaml) found in model response.\nResponse preview:\n{response_preview}")
 
 def parse_task_response(task_response):
     task_names = []
@@ -349,14 +364,32 @@ def build_task_given_text(object_category, task_name, task_description, addition
     print("=" * 50)
     print("=" * 20, "generating task yaml config", "=" * 20)
     print("=" * 50)
-    task_yaml_response = query(system, [task_yaml_config_prompt_filled], [], save_path=save_path, debug=False, 
-                            temperature=temperature_dict["yaml"], model=model_dict["yaml"])
-    # NOTE: parse the yaml file and generate the task in the simulator.
-    description = sanitize_description_for_filename(f"{task_name}_{task_description}", max_length=20)
-    task_yaml_response = task_yaml_response.split("\n")
-    size_save_path = os.path.join(save_folder, "gpt_response/size_{}.json".format(task_name))
-    parsed_yaml, save_name = parse_response_to_get_yaml(task_yaml_response, description, save_path=size_save_path, 
-                                                        temperature=temperature_dict["size"], model=model_dict["size"])
+
+    # Retry loop for YAML generation
+    max_retries = 5
+    parsed_yaml = None
+    save_name = None
+
+    for attempt in range(max_retries):
+        if attempt > 0:
+            print(f"\n[WARNING] Retry attempt {attempt + 1}/{max_retries} for YAML config generation...")
+            warnings.warn(f"Retrying YAML config generation (attempt {attempt + 1}/{max_retries})")
+
+        try:
+            task_yaml_response = query(system, [task_yaml_config_prompt_filled], [], save_path=save_path, debug=False,
+                                    temperature=temperature_dict["yaml"], model=model_dict["yaml"])
+            # NOTE: parse the yaml file and generate the task in the simulator.
+            description = sanitize_description_for_filename(f"{task_name}_{task_description}", max_length=20)
+            task_yaml_response = task_yaml_response.split("\n")
+            size_save_path = os.path.join(save_folder, "gpt_response/size_{}.json".format(task_name))
+            parsed_yaml, save_name = parse_response_to_get_yaml(task_yaml_response, description, save_path=size_save_path,
+                                                                temperature=temperature_dict["size"], model=model_dict["size"])
+            print(f"[OK] Successfully generated and parsed YAML config")
+            break
+        except ValueError as e:
+            print(f"\n[FAIL] YAML parsing failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt == max_retries - 1:
+                raise ValueError(f"Failed to generate valid YAML config after {max_retries} attempts. Last error: {e}")
 
     # NOTE: post-process such that articulated object is urdf.
     # NOTE: post-process to include the reward asset path for reward generation. 

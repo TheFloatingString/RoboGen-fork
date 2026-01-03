@@ -3,6 +3,7 @@ from gpt_4.prompts.utils import build_task_given_text
 from gpt_4.prompts.prompt_distractor import generate_distractor
 import time, datetime, os, copy
 import yaml
+import warnings
 
 user_contents = [
     """
@@ -136,6 +137,12 @@ Can you do the same for the following task and object:
 
 
 def parse_response(task_response):
+    """
+    Parse task expansion response.
+
+    Raises:
+        ValueError: If required fields are not found in response
+    """
     task_response = "\n".join(
         [line for line in task_response.split("\n") if line.strip()]
     )
@@ -171,6 +178,20 @@ def parse_response(task_response):
                     involved_joints += task_response[joint_idx][2:]
             joints = involved_joints
             break
+
+    # Validation
+    if task_description is None:
+        response_preview = '\n'.join(task_response[:10])
+        raise ValueError(f"No 'Description:' field found in response.\nResponse preview:\n{response_preview}")
+
+    if additional_objects is None:
+        raise ValueError("No 'Additional Objects:' field found in response")
+
+    if links is None:
+        raise ValueError("No 'Links:' section found in response")
+
+    if joints is None:
+        raise ValueError("No 'Joints:' section found in response")
 
     return task_description, additional_objects, links, joints
 
@@ -223,15 +244,38 @@ def expand_task_name(
     )
 
     system = "You are a helpful assistant."
-    task_response = query(
-        system,
-        [task_user_contents_filled],
-        [],
-        save_path=save_path,
-        debug=False,
-        temperature=0,
-        model=model,
-    )
+
+    # Retry loop for task expansion
+    max_retries = 5
+    task_description = None
+    additional_objects = None
+    links = None
+    joints = None
+
+    for attempt in range(max_retries):
+        if attempt > 0:
+            print(f"\n[WARNING] Retry attempt {attempt + 1}/{max_retries} for task expansion...")
+            warnings.warn(f"Retrying task expansion (attempt {attempt + 1}/{max_retries})")
+
+        try:
+            task_response = query(
+                system,
+                [task_user_contents_filled],
+                [],
+                save_path=save_path,
+                debug=False,
+                temperature=0,
+                model=model,
+            )
+
+            ### parse the response
+            task_description, additional_objects, links, joints = parse_response(task_response)
+            print(f"[OK] Successfully parsed task expansion")
+            break
+        except ValueError as e:
+            print(f"\n[FAIL] Task expansion parsing failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt == max_retries - 1:
+                raise ValueError(f"Failed to parse task expansion after {max_retries} attempts. Last error: {e}")
 
     ### Save prompt metadata to YAML
     # Get model provider from environment variable (matches query.py logic)
@@ -261,9 +305,6 @@ def expand_task_name(
     metadata_save_path = os.path.join(save_folder, "prompt_metadata.yaml")
     with open(metadata_save_path, 'w') as f:
         yaml.dump(prompt_metadata, f, indent=4, default_flow_style=False)
-
-    ### parse the response
-    task_description, additional_objects, links, joints = parse_response(task_response)
 
     return (
         task_description,

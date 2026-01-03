@@ -1,6 +1,7 @@
 import copy
 from gpt_4.query import query
 import os
+import warnings
 
 user_contents = [
 """
@@ -527,9 +528,18 @@ gym.register(
 )
 """
 
-def decompose_and_generate_reward_or_primitive(task_name, task_description, initial_config, articulation_tree, semantics, 
-                              involved_links, involved_joints, object_id, yaml_config_path, save_path, 
-                              temperature=0.4, model='gpt-4.1'):
+def decompose_and_generate_reward_or_primitive(task_name, task_description, initial_config, articulation_tree, semantics,
+                              involved_links, involved_joints, object_id, yaml_config_path, save_path,
+                              temperature=0.4, model='gpt-4.1', max_retries=5):
+    """
+    Decompose task into substeps and generate reward/primitive code.
+
+    Args:
+        max_retries: Maximum number of attempts to get a valid response (default: 5)
+
+    Raises:
+        ValueError: If parsing fails after max_retries attempts
+    """
     query_task = """
 Task name: {}
 Description: {}
@@ -547,65 +557,104 @@ Links:
 Joints:
 {}
 """.format(task_name, task_description, initial_config, articulation_tree, semantics, involved_links, involved_joints)
-    
+
     filled_user_contents = copy.deepcopy(user_contents)
     filled_user_contents[-1] = filled_user_contents[-1] + query_task
 
     system = "You are a helpful assistant."
-    reward_response = query(system, filled_user_contents, assistant_contents, save_path=save_path, debug=False, 
-                            temperature=temperature, model=model)
-    res = reward_response.split("\n")
 
-    substeps = []
-    substep_types = []
-    reward_or_primitives = []
-    action_spaces = []
+    # Retry loop for parsing validation
+    for attempt in range(max_retries):
+        if attempt > 0:
+            print(f"\n[WARNING] Retry attempt {attempt + 1}/{max_retries} for substep decomposition...")
+            warnings.warn(f"Retrying substep decomposition (attempt {attempt + 1}/{max_retries})")
 
-    num_lines = len(res)
-    for l_idx, line in enumerate(res):
-        line = line.lower()
-        if line.startswith("substep"):
-            substep_name = line.split(":")[1]
-            substeps.append(substep_name)
+        reward_response = query(system, filled_user_contents, assistant_contents, save_path=save_path, debug=False,
+                                temperature=temperature, model=model)
+        res = reward_response.split("\n")
 
-            py_start_idx, py_end_idx = l_idx, l_idx
-            for l_idx_2 in range(l_idx + 1, num_lines):
-                ### this is a reward
-                if res[l_idx_2].lower().startswith("```reward"):
-                    substep_types.append("reward")
-                    py_start_idx = l_idx_2 + 1
-                    for l_idx_3 in range(l_idx_2 + 1, num_lines):
-                        if "```" in res[l_idx_3]:
-                            py_end_idx = l_idx_3
-                            break
-            
-                if res[l_idx_2].lower().startswith("```primitive"):
-                    substep_types.append("primitive")
-                    action_spaces.append("None")
-                    py_start_idx = l_idx_2 + 1
-                    for l_idx_3 in range(l_idx_2 + 1, num_lines):
-                        if "```" in res[l_idx_3]:
-                            py_end_idx = l_idx_3
-                            break
-                    break
+        substeps = []
+        substep_types = []
+        reward_or_primitives = []
+        action_spaces = []
 
-                if res[l_idx_2].lower().startswith("```action space"):
-                    action_space = res[l_idx_2 + 1]
-                    action_spaces.append(action_space)
-                    break
+        num_lines = len(res)
+        for l_idx, line in enumerate(res):
+            line_lower = line.lower()
+            if line_lower.startswith("substep"):
+                substep_name = line.split(":")[1]
+                substeps.append(substep_name)
 
-            reward_or_primitive_lines = res[py_start_idx:py_end_idx]
-            reward_or_primitive_lines = [line.lstrip() for line in reward_or_primitive_lines]
-            if substep_types[-1] == 'reward':
-                reward_or_primitive_lines[0] = "    " + reward_or_primitive_lines[0]
-                for idx in range(1, len(reward_or_primitive_lines)):
-                    reward_or_primitive_lines[idx] = "        " + reward_or_primitive_lines[idx]
-            else:
-                for idx in range(0, len(reward_or_primitive_lines)):
-                    reward_or_primitive_lines[idx] = "        " + reward_or_primitive_lines[idx]
-            reward_or_primitive = "\n".join(reward_or_primitive_lines) + "\n"
+                py_start_idx, py_end_idx = l_idx, l_idx
+                for l_idx_2 in range(l_idx + 1, num_lines):
+                    ### this is a reward
+                    if res[l_idx_2].lower().startswith("```reward"):
+                        substep_types.append("reward")
+                        py_start_idx = l_idx_2 + 1
+                        for l_idx_3 in range(l_idx_2 + 1, num_lines):
+                            if "```" in res[l_idx_3]:
+                                py_end_idx = l_idx_3
+                                break
 
-            reward_or_primitives.append(reward_or_primitive)
+                    if res[l_idx_2].lower().startswith("```primitive"):
+                        substep_types.append("primitive")
+                        action_spaces.append("None")
+                        py_start_idx = l_idx_2 + 1
+                        for l_idx_3 in range(l_idx_2 + 1, num_lines):
+                            if "```" in res[l_idx_3]:
+                                py_end_idx = l_idx_3
+                                break
+                        break
+
+                    if res[l_idx_2].lower().startswith("```action space"):
+                        action_space = res[l_idx_2 + 1]
+                        action_spaces.append(action_space)
+                        break
+
+                reward_or_primitive_lines = res[py_start_idx:py_end_idx]
+                reward_or_primitive_lines = [line.lstrip() for line in reward_or_primitive_lines]
+                if len(substep_types) > 0 and substep_types[-1] == 'reward':
+                    reward_or_primitive_lines[0] = "    " + reward_or_primitive_lines[0]
+                    for idx in range(1, len(reward_or_primitive_lines)):
+                        reward_or_primitive_lines[idx] = "        " + reward_or_primitive_lines[idx]
+                else:
+                    for idx in range(0, len(reward_or_primitive_lines)):
+                        reward_or_primitive_lines[idx] = "        " + reward_or_primitive_lines[idx]
+                reward_or_primitive = "\n".join(reward_or_primitive_lines) + "\n"
+
+                reward_or_primitives.append(reward_or_primitive)
+
+        # Validation checks
+        validation_passed = True
+        validation_errors = []
+
+        if len(substeps) == 0:
+            validation_errors.append("No substeps found in response (expected lines starting with 'Substep:')")
+            validation_passed = False
+
+        if len(substeps) != len(substep_types):
+            validation_errors.append(f"Mismatch: {len(substeps)} substeps but {len(substep_types)} types (expected ```reward or ```primitive blocks)")
+            validation_passed = False
+
+        if len(substeps) != len(reward_or_primitives):
+            validation_errors.append(f"Mismatch: {len(substeps)} substeps but {len(reward_or_primitives)} code blocks")
+            validation_passed = False
+
+        # Log validation results
+        if validation_passed:
+            print(f"[OK] Successfully parsed {len(substeps)} substeps")
+            break
+        else:
+            print(f"\n[FAIL] Parsing validation failed (attempt {attempt + 1}/{max_retries}):")
+            for error in validation_errors:
+                print(f"   - {error}")
+            print(f"\nModel response preview (first 500 chars):\n{reward_response[:500]}\n")
+
+            if attempt == max_retries - 1:
+                error_msg = f"Failed to parse substeps after {max_retries} attempts. Validation errors:\n"
+                error_msg += "\n".join(f"  - {err}" for err in validation_errors)
+                error_msg += f"\n\nModel response:\n{reward_response}"
+                raise ValueError(error_msg)
 
     task_name = task_name.replace(" ", "_")
     parent_folder = os.path.dirname(os.path.dirname(save_path))
