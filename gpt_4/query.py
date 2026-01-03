@@ -30,10 +30,6 @@ def use_openai_api(assistant_contents, user_contents, system, model, temperature
         temperature=temperature
     )
 
-    # append string of all messages to file
-    with open("data/debug/gpt_response.json", "w") as f:
-        json.dump(response, f, indent=4)
-
     result = ''
     for choice in response.choices:
         result += choice.message.content

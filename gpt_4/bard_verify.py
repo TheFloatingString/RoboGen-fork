@@ -99,10 +99,8 @@ def verify_objaverse_object(object_name, uid, task_name=None, task_description=N
 
         Please reply first with your reasoning, and then a single line with "**yes**" or "**no**" to indicate whether this object can be used.
         """.format(task_name, task_description, object_name, object_name, task_name, description)
-        
-            if not os.path.exists('data/debug'):
-                os.makedirs('data/debug')
-            res = query(system, [query_string], [], save_path='data/debug/verify.json', temperature=0)
+
+            res = query(system, [query_string], [], save_path=None, temperature=0)
             
             responses = res.split("\n")
 

@@ -251,9 +251,6 @@ substeps:
     new_user_contents = copy.deepcopy(user_contents)
     new_user_contents[0] = new_user_contents[0] + input
 
-    if save_path is None:
-        save_path = 'data/debug/{}_joint_angle.json'.format(input_task_name.replace(" ", "_"))
-
     system = "You are a helpful assistant."
     response = query(system, new_user_contents, assistant_contents, save_path=save_path, temperature=temperature, model=model)
 
@@ -283,9 +280,6 @@ substeps:
     
     new_user_contents = copy.deepcopy(user_contents_rigid)
     new_user_contents[0] = new_user_contents[0] + input
-
-    if save_path is None:
-        save_path = 'data/debug/{}_joint_angle.json'.format(input_task_name.replace(" ", "_"))
 
     system = "You are a helpful assistant."
     response = query(system, new_user_contents, assistant_contents, save_path=save_path, temperature=temperature, model=model)
