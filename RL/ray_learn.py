@@ -426,6 +426,7 @@ def run_RL(
                     wandb_config["extra_config"]["prompt_task_name"] = prompt_metadata.get("task_name", "unknown")
                     wandb_config["extra_config"]["prompt_temperature"] = prompt_metadata.get("temperature", "unknown")
                     wandb_config["extra_config"]["prompt_object_category"] = prompt_metadata.get("object_category", "unknown")
+                    wandb_config["extra_config"]["prompt_steering_prompt"] = prompt_metadata.get("steering_prompt", None)
 
                     print(f"Loaded prompt metadata: model={prompt_metadata.get('model_name')}, provider={prompt_metadata.get('model_provider')}, task={prompt_metadata.get('task_name')}")
             else:
