@@ -203,6 +203,7 @@ def expand_task_name(
     meta_path="generated_task_from_description",
     temperate=0,
     model="gpt-4.1",
+    steering_prompt=None,
 ):
     ts = time.time()
     time_string = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d-%H-%M-%S")
@@ -266,6 +267,7 @@ def expand_task_name(
                 debug=False,
                 temperature=0,
                 model=model,
+                steering_prompt=steering_prompt,
             )
 
             ### parse the response
@@ -295,6 +297,7 @@ def expand_task_name(
         "model_provider": model_provider,
         "temperature": temperate,
         "system_prompt": system,
+        "steering_prompt": steering_prompt,
         "user_prompt_template": user_contents[0],
         "filled_prompt": task_user_contents_filled,
         "task_name": task_name,
@@ -324,6 +327,7 @@ def generate_from_task_name(
     temperature_dict=None,
     model_dict=None,
     meta_path="generated_task_from_description",
+    steering_prompt=None,
 ):
     expansion_model = model_dict.get("expansion", "gpt-4.1")
     expansion_temperature = temperature_dict.get("expansion", 0)
@@ -342,6 +346,7 @@ def generate_from_task_name(
         meta_path,
         temperate=expansion_temperature,
         model=expansion_model,
+        steering_prompt=steering_prompt,
     )
     config_path = build_task_given_text(
         object_category,
@@ -371,6 +376,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("--object", type=str, default="Box")
     parser.add_argument("--object_path", type=str, default="100426")
+    parser.add_argument(
+        "--steering_prompt",
+        type=str,
+        default=None,
+        help="Optional steering prompt to guide LLM behavior (e.g., 'Be concise', 'Focus on safety')"
+    )
     args = parser.parse_args()
 
     temperature_dict = {
@@ -405,6 +416,7 @@ if __name__ == "__main__":
         temperature_dict=temperature_dict,
         meta_path=meta_path,
         model_dict=model_dict,
+        steering_prompt=args.steering_prompt,
     )
     generate_distractor(
         config_path, temperature_dict=temperature_dict, model_dict=model_dict

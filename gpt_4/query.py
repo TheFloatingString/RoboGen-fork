@@ -160,10 +160,14 @@ def use_ollama_api(assistant_contents, user_contents, system, model, temperature
     return result
 
 
-def query(system, user_contents, assistant_contents, model=None, save_path=None, temperature=1, debug=False):
+def query(system, user_contents, assistant_contents, model=None, save_path=None, temperature=1, debug=False, steering_prompt=None):
     # Use MODEL environment variable if provided, otherwise use the passed model parameter or defaults
     model = os.getenv("MODEL")
     print(f"env var for MODEL: {model}")
+
+    # Apply steering prompt to system message if provided
+    if steering_prompt:
+        system = f"{system}\n\n{steering_prompt}"
 
     if model is None:
         model = os.getenv('MODEL')

@@ -125,15 +125,29 @@ If you wish to just generate the tasks, run
 ```
 python run.py --train 0
 ```
-which will generate the tasks, scene config yaml files, and training supervisions. The generated tasks will be stored at `data/generated_tasks_release/`.  
+which will generate the tasks, scene config yaml files, and training supervisions. The generated tasks will be stored at `data/generated_tasks_release/`.
 If you want to generate task given a text description, you can run
 ```
 python gpt_4/prompts/prompt_from_description.py --task_description [TASK_DESCRIPTION] --object [PARTNET_ARTICULATION_OBJECT_CATEGORY]
-``` 
+```
 For example,
 ```
 python gpt_4/prompts/prompt_from_description.py --task_description "Put a pen into the box" --object "Box"
 ```
+
+#### Steering Prompts
+You can optionally provide a steering prompt to guide the LLM's behavior during task generation:
+```
+python gpt_4/prompts/prompt_from_description.py \
+  --task_description "Put a pen into the box" \
+  --object "Box" \
+  --steering_prompt "Be extremely concise and focus on safety considerations"
+```
+The steering prompt is appended to the system prompt and can be used to influence various aspects of generation, such as:
+- Emphasizing safety: `"Prioritize safety constraints and collision avoidance"`
+- Encouraging creativity: `"Generate creative and unconventional approaches"`
+- Controlling verbosity: `"Be concise and minimize explanation"`
+- Domain-specific focus: `"Focus on energy efficiency and minimal motion"`
 
 ### Learn skills
 If you wish to just learn the skill with a generated task, run
