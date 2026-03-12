@@ -169,6 +169,34 @@ def use_openrouter_kimi_api(assistant_contents, user_contents, system, model, te
     return result
 
 
+def use_openrouter_kimi_fireworks_api(assistant_contents, user_contents, system, model, temperature=0.7):
+    print(f"choice of model: {model}")
+    num_assistant_mes = len(assistant_contents)
+    messages = []
+
+    messages.append({"role": "system", "content": "{}".format(system)})
+    for idx in range(num_assistant_mes):
+        messages.append({"role": "user", "content": user_contents[idx]})
+        messages.append({"role": "assistant", "content": assistant_contents[idx]})
+    messages.append({"role": "user", "content": user_contents[-1]})
+
+    openai.api_key = os.environ["OPENROUTER_API_KEY"]
+    openai.api_base = "https://openrouter.ai/api/v1"
+
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        provider={"order": ["Fireworks"]}
+    )
+
+    result = ''
+    for choice in response.choices:
+        result += choice.message.content
+
+    return result
+
+
 def use_ollama_api(assistant_contents, user_contents, system, model, temperature=0.7):
     num_assistant_mes = len(assistant_contents)
     messages = []
@@ -215,6 +243,8 @@ def query(system, user_contents, assistant_contents, model=None, save_path=None,
                 model = 'z-ai/glm-4.6'
             elif os.getenv("TARGET_MODEL_PROVIDER") == "openrouter/moonshotai/kimi-k2.5/baseten":
                 model = 'moonshotai/kimi-k2.5'
+            elif os.getenv("TARGET_MODEL_PROVIDER") == "openrouter/moonshotai/kimi-k2.5/fireworks":
+                model = 'moonshotai/kimi-k2.5'
             else:
                 model = 'gpt-4.1'  # fallback default
 
@@ -254,6 +284,8 @@ def query(system, user_contents, assistant_contents, model=None, save_path=None,
         result = use_openrouter_api(assistant_contents, user_contents, system, model, temperature=1)
     elif os.getenv("TARGET_MODEL_PROVIDER") == "openrouter/moonshotai/kimi-k2.5/baseten":
         result = use_openrouter_kimi_api(assistant_contents, user_contents, system, model, temperature=1)
+    elif os.getenv("TARGET_MODEL_PROVIDER") == "openrouter/moonshotai/kimi-k2.5/fireworks":
+        result = use_openrouter_kimi_fireworks_api(assistant_contents, user_contents, system, model, temperature=1)
     else:
         raise ValueError("Invalid target model provider. Please set the environment variable TARGET_MODEL_PROVIDER to 'openai', 'anthropic', 'groq', 'novita', 'openrouter', or 'ollama'.")
 
