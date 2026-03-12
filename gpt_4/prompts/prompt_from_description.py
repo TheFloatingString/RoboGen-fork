@@ -207,9 +207,10 @@ def expand_task_name(
 ):
     ts = time.time()
     time_string = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d-%H-%M-%S")
+    task_name_slug = task_name.replace(" ", "_")[:100]
     save_folder = "data/{}/{}_{}_{}_{}".format(
         meta_path,
-        task_name.replace(" ", "_"),
+        task_name_slug,
         object_category,
         object_path,
         time_string,
