@@ -289,6 +289,10 @@ def expand_task_name(
         actual_model = "glm-4.6"
     elif model_provider == "openai":
         actual_model = "gpt-4.1"
+    elif model_provider == "openrouter/moonshotai/kimi-k2.5/baseten":
+        actual_model = "moonshotai/kimi-k2.5/baseten"
+    elif model_provider == "openrouter/moonshotai/kimi-k2.5/fireworks":
+        actual_model = "moonshotai/kimi-k2.5/fireworks"
     else:
         raise NotImplementedError(f"model provider logging not implemented for `{model_provider}`")
 
