@@ -534,6 +534,8 @@ def decompose_and_generate_reward_or_primitive(task_name, task_description, init
     """
     Decompose task into substeps and generate reward/primitive code.
 
+	When you generate substeps, avoid using two substeps that involve a first lid and a second lid.
+
     Args:
         max_retries: Maximum number of attempts to get a valid response (default: 5)
 
